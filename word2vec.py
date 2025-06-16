@@ -3,10 +3,10 @@ Author: @jay.shah
 Date: 6/15/2025
 """
 import re
-import numpy as nppip
+import numpy as np
 from data import text
 
-#
+np.random.seed(42)
 
 """
 The first two functions here are part of the preprocessing step for making my text data usable.
@@ -91,14 +91,14 @@ def generate_training_data(tokens: list, word_to_id: dict, window: int) -> list:
     
     return np.asarray(X), np.asarray(y)
 
-def concat(*iterables):
+def concat(*iterables: list) -> list[int]:
     """
     Yields a concatenation of a range of indexes based on the sliding window for each token.
     """
     for iterable in iterables:
         yield from iterable
 
-def one_hot_encode(id, vocab_size):
+def one_hot_encode(id: int, vocab_size: int) -> list:
     """
     Generates an array for each token, where the token's index is indicated with a 1
     """
@@ -120,4 +120,64 @@ X, y =  generate_training_data(tokens, word_to_id, window=2)
 """
 Now, let's implement the code to train the model.
 """
+
+def init_network(vocab_size: int, n_embedding: int) -> dict:
+    """
+    The values of the dictionary I'm creating are the weight matrices and keys.
+    """
+    model = {
+        "w1": np.random.randn(vocab_size, n_embedding),
+        "w2": np.random.randn(n_embedding, vocab_size)
+    }
+
+    return model
+
+# Initialize the model with 10 dimensions for each word
+model = init_network(len(word_to_id), 10)
+
+# Now I can code the function for forward propagation
+def forward(model: dict, X: list, return_cache=True) -> dict:
+    """
+    Forward propagation code, I'm performing the three layers of matrix multiplication 
+    to achieve the embedded matrix, weighted matrix, and softmax matrix.
+    I will use cache for backward propagation as an intermediate variable that holds calculation answers
+    """
+
+    cache = {}
+    cache["a1"] = X @ model["w1"]
+    cache["a2"] = cache["a1"] @ model["w2"]
+    cache["z"] = softmax(cache["a2"])
+
+    if not return_cache:
+        return cache["z"]
+    return cache
+
+def softmax(X):
+    res = []
+    for x in X:
+        exp = np.exp(x)
+        res.append(exp / exp.sum())
+    return res
+
+# checking the shape of the models to verify the dimnesions and token lenght
+# print((X @ model["w1"]).shape)
+# print((X @ model["w1"] @ model["w2"]).shape)
+
+def backward(model, X, y, alpha):
+    """
+    Backward propagation training. I'll do my best to explain each step as I go.
+    """
+    # start with getting the forward values, using the results of forward propagation I can use matrix multiplication to backwards propagate the intermediate matrices and update their values according to how they should be adjusted
+    cache = forward(model, X, True)
+    # Calculate the error between the predicted ouput and the actual output
+    # cache z is the model's prediction
+    # y is one hot encoded correct values
+    # both have the same shape (batch_size, vocab_size)
+    da2 = cache["z"] - y 
+    # Calculates the error gradient for w2, which is the weight layer between the embedding layer and the output layer
+    # cache a1 is the output from the embedding layer, all the one hot vectors for each token
+    # .T transposes, essnetially pivoting the rows and columns
+    # we transpose a1 because we need the same shapes of the matrices to perform multiplication
+    # So basically we're taking what the model thinks to do, and how wrong it is, and put that together. Now we know how much to shift the weights of the embed layer a1
+    dw2 = cache["a1"].T @ da2
 
