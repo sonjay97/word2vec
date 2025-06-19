@@ -4,7 +4,12 @@ Date: 6/15/2025
 """
 import re
 import numpy as np
+import matplotlib.pyplot as plt
 from data import text
+
+
+
+
 
 np.random.seed(42)
 
@@ -197,3 +202,24 @@ def cross_entropy(z, y):
     """z is the softmax output, y is the one hot encoded TRUE label, or our accurate one hot matrix"""
     return - np.sum(np.log(z) * y)
 
+
+n_iter = 50
+learning_rate = 0.05
+
+history = [backward(model, X, y, learning_rate) for _ in range(n_iter)]
+
+plt.plot(range(len(history)), history, color="skyblue")
+# plt.show()
+
+def get_embedding(model, word):
+    """function that grabds the embeddings for a given word"""
+    try:
+        idx = word_to_id[word]
+    except KeyError:
+        print("`word` not in corpus")
+    one_hot = one_hot_encode(idx, len(word_to_id))
+
+    return forward(model, one_hot)["a1"]
+
+# example call for the word "machine"
+print(get_embedding(model, "machine"))
