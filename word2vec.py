@@ -175,9 +175,25 @@ def backward(model, X, y, alpha):
     # both have the same shape (batch_size, vocab_size)
     da2 = cache["z"] - y 
     # Calculates the error gradient for w2, which is the weight layer between the embedding layer and the output layer
-    # cache a1 is the output from the embedding layer, all the one hot vectors for each token
+    # cache a1 is the activation from the first layer after the input, not necessarily an embedding layer, all the one hot vectors for each token
     # .T transposes, essnetially pivoting the rows and columns
     # we transpose a1 because we need the same shapes of the matrices to perform multiplication
     # So basically we're taking what the model thinks to do, and how wrong it is, and put that together. Now we know how much to shift the weights of the embed layer a1
     dw2 = cache["a1"].T @ da2
+    # dw1 propagates error back through the second layer
+    da1 = da2 @ model["w2"].T
+    # dw1 computes how the first weight matrix should change based on the original input x and the backpropagated error
+    dw1 = X.T @ da1
+
+    assert(dw2.shape == model["w2"].shape)
+    assert(dw1.shape == model["w1"].shape)
+
+    model["w1"] -= alpha * dw1
+    model["w2"] -= alpha * dw2
+
+    return cross_entropy(cache["z"], y)
+
+def cross_entropy(z, y):
+    """z is the softmax output, y is the one hot encoded TRUE label, or our accurate one hot matrix"""
+    return - np.sum(np.log(z) * y)
 
